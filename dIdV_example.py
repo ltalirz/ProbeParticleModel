@@ -1,4 +1,4 @@
-#!/usr/bin/python
+1#!/usr/bin/python
 
 import os
 import numpy as np
@@ -28,7 +28,8 @@ cut_min=-1.0	# HOMO -0.88 bellow the Fermi Level
 cut_max=+1.0	# LUMO -0.88 above the Fermi Level
 cut_at=-1	# All atoms of the molecule
 eta = 0.01	# very low, to pronounce the single orbitals only
-# WF_decay=1.0  # for STM only - how fast the exponential decay fall, with the applied bias ( if 1 - 1:1 correspondence with bias; if 0, it doesn't change)
+WF_decay=1.0	# for STM only - how fast the exponential decay fall, with the applied bias ( if 1 - 1:1 correspondence with bias; if 0, it doesn't change)
+nV = 9		# for STM only
 
 #eigEn, coefs, Ratin  = PS.read_GPAW_all(name = 'out_LCAO_LDA.gpw', fermi=None, orbs = orbs, pbc=pbc, cut_min=cut_min, cut_max=cut_max, cut_at=cut_at, lower_at=[0,1.]);
 Ratin = PS.read_fire_atoms(path+'crazy_mol.xyz',pbc=pbc,cut_at=cut_at)
@@ -62,14 +63,13 @@ for WorkFunction in [WorkFunction]:
     for V in Voltages:
 	for eta in [eta]:
 	    current0 = PS.dIdV( V, WorkFunction, eta, eigEn,  tip_r2 , Ratin, coefs, orbs=orbs , s=1.0, px=0.0, py=0.0, pz = 0.0)
-	    np.save('didv_s-fixed_'+namez[i]+"_WF_"+str(WorkFunction)+"_"+str(eta)+'.npy',current0)
 	    current1 = PS.dIdV( V, WorkFunction, eta, eigEn,  tip_r1 , Ratin, coefs, orbs=orbs , s=1.0, px=0.0, py=0.0, pz = 0.0)
-	    np.save('didv_s_'+namez[i]+"_WF_"+str(WorkFunction)+"_"+str(eta)+'.npy',current1)
 	    current2 = PS.dIdV( V, WorkFunction, eta, eigEn,  tip_r1 , Ratin, coefs, orbs=orbs , s=0.0, px=1.0, py=1.0, pz = 0.0)
-	    np.save('didv_pxy_'+namez[i]+"_WF_"+str(WorkFunction)+"_"+str(eta)+'.npy',current2)
-	    #current3 = PS.dIdV( V, WorkFunction, eta, eigEn,  tip_r1 , Ratin, coefs, orbs=orbs , s=0.0, px=0.0, py=0.0, pz = 1.0)
-	    #np.save('didv_pz_'+namez[i]+"_WF_"+str(WorkFunction)+"_"+str(eta)+'.npy',current3)
-	    #current3 = PS.STM( V, nV, WorkFunction, eta, eigEn,  tip_r1 , Ratin, coefs, orbs=orbs , pz=0.0 ,s=0.0, px=0.5, py=0.5, WF_decay=WF_decay)
+	    current3 = PS.dIdV_tilt( V, WorkFunction, eta, eigEn,  tip_r1,  tip_r2 , Ratin, coefs, orbs=orbs , pz = 1.0, al =1.0)
+	    current4 = PS.dIdV_tilt( V, WorkFunction, eta, eigEn,  tip_r1,  tip_r2 , Ratin, coefs, orbs=orbs , dxyz = 1.0, al =1.0)
+	    current5 = PS.STM( V, nV, WorkFunction, eta, eigEn,  tip_r1 , Ratin, coefs, orbs=orbs , px=0.5, py=0.5, WF_decay=WF_decay)
+	    # next procedure is under development
+	    current6 = PS.IETS_simple( V, WorkFunction, eta ,eigEn, tip_r1 , Ratin, coefs, orbs=orbs , s=0.0, px =0.5, py=0.5, pz=0.0, dxz=0.0, dyz=0.0, dz2=0.0, Amp=0.02)
 	    print " plotting "
 	
 	    for k in range(df.shape[0]):
@@ -77,44 +77,77 @@ for WorkFunction in [WorkFunction]:
 		curr0 = np.array(current0[k,:,:]).copy()
 		curr1 = np.array(current1[k,:,:]).copy()
 		curr2 = np.array(current2[k,:,:]).copy()
-		#curr3 = np.array(current3[k,:,:]).copy()
+		curr3 = np.array(current3[k,:,:]).copy()
+		curr4 = np.array(current4[k,:,:]).copy()
+		curr5 = np.array(current5[k,:,:]).copy()
+		curr6 = np.array(current6[k,:,:]).copy()
 		
 		name_file='didV-'+namez[i]+'_%03d.dat' %k
 		name_plot_df='height:%03dA; df [Hz]' %k
 		name_plot0=namez[i]+';height:%03dA; dIdV [G0] s-fixed-tip' %k
 		name_plot1=namez[i]+';height:%03dA; dIdV [G0] s-tip' %k
 		name_plot2=namez[i]+';height:%03dA; dIdV [G0] pxy-tip' %k
-		#name_plot3=namez[i]+';height:%03dA; dIdV [G0] pz-tip' %k
-
+		name_plot3=namez[i]+';height:%03dA; dIdV [G0] pz-tip tilting' %k
+		name_plot4=namez[i]+';height:%03dA; dIdV [G0] dxyz-tip tilting' %k
+		name_plot5=namez[i]+';height:%03dA; STM [I] pxy-tip' %k
+		name_plot6=namez[i]+';height:%03dA; Under develoment' %k
+		
 		# ploting part here:
-		plt.figure( figsize=(1.5* xl , 1.5*yl/4 ) )
-		plt.subplot(1,4,1)
+		plt.figure( figsize=(1.5* xl , 1.5*yl/2 ) )
+		plt.subplot(2,4,1)
 		plt.imshow( dff, origin='image', extent=extent , cmap='gray')
 		plt.xlabel(r' Tip_x $\AA$')
 		plt.ylabel(r' Tip_y $\AA$')
 		plt.title(name_plot_df)
-
+		
 		# ploting part here:
-		plt.subplot(1,4,2)
+		plt.subplot(2,4,2)
 		plt.imshow( curr0, origin='image', extent=extent, cmap='gray' )
 		plt.xlabel(r' Tip_x $\AA$')
 		plt.ylabel(r' Tip_y $\AA$')
 		plt.title(name_plot0)
 
 		# ploting part here:
-		plt.subplot(1,4,3)
+		plt.subplot(2,4,3)
 		plt.imshow( curr1, origin='image', extent=extent, cmap='gray' )
 		plt.xlabel(r' Tip_x $\AA$')
 		plt.ylabel(r' Tip_y $\AA$')
 		plt.title(name_plot1)
-
+		
 		# ploting part here:
-		plt.subplot(1,4,4)
+		plt.subplot(2,4,4)
 		plt.imshow( curr2, origin='image', extent=extent, cmap='gray' )
 		plt.xlabel(r' Tip_x $\AA$')
 		plt.ylabel(r' Tip_y $\AA$')
 		plt.title(name_plot2)
-
+		
+		plt.subplot(2,4,5)
+		plt.imshow( curr3, origin='image', extent=extent , cmap='gray')
+		plt.xlabel(r' Tip_x $\AA$')
+		plt.ylabel(r' Tip_y $\AA$')
+		plt.title(name_plot3)
+		
+		# ploting part here:
+		plt.subplot(2,4,6)
+		plt.imshow( curr4, origin='image', extent=extent, cmap='gray' )
+		plt.xlabel(r' Tip_x $\AA$')
+		plt.ylabel(r' Tip_y $\AA$')
+		plt.title(name_plot4)
+		
+		# ploting part here:
+		plt.subplot(2,4,7)
+		plt.imshow( curr5, origin='image', extent=extent, cmap='gray' )
+		plt.xlabel(r' Tip_x $\AA$')
+		plt.ylabel(r' Tip_y $\AA$')
+		plt.title(name_plot5)
+		
+		# ploting part here:
+		plt.subplot(2,4,8)
+		plt.imshow( curr6, origin='image', extent=extent, cmap='gray' )
+		plt.xlabel(r' Tip_x $\AA$')
+		plt.ylabel(r' Tip_y $\AA$')
+		plt.title(name_plot6)
+		
 		plt.savefig( 'didv_'+namez[i]+"_WF_"+str(WorkFunction)+"_"+str(eta)+'_%03d.png' %k , bbox_inches='tight' )
 		#plt.show()
 		#
@@ -132,7 +165,7 @@ for WorkFunction in [WorkFunction]:
 		#f.close()
 		#
 	
-	plt.show()
+	#plt.show()
 	i = i+1
 	
 

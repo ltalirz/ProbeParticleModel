@@ -10,8 +10,8 @@ import pyProbeParticle.GridUtils      as GU
 # =============== arguments definition
 
 dz=.1
-df = np.load('FFel_z.npy')
-lvec = np.load('FFel_vec.npy')
+df = np.load('FFLJ_z.npy')
+lvec = np.load('FFLJ_vec.npy')
 
 print lvec
 

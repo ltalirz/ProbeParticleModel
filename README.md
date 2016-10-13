@@ -16,4 +16,4 @@ works in python2.7, matplotlibm, cpp4.4.8, (for some parts ASE and GPAW are impo
 * [Prokop Hapala, Ruslan Temirov, F. Stefan Tautz, and Pavel Jelínek, Origin of High-Resolution IETS-STM Images of Organic Molecules with Functionalized Tips, Phys. Rev. Lett. 113, 226101 – Published 25 November 2014,](http://journals.aps.org/prl/abstract/10.1103/PhysRevLett.113.226101) 
 and others
 ### References (STM)
-* [ soon ] 
+* [ https://arxiv.org/abs/1609.09462 ] 

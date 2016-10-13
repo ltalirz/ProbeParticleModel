@@ -28,6 +28,7 @@ array4d = np.ctypeslib.ndpointer(dtype=np.double, ndim=4, flags='CONTIGUOUS')
 # ======== Python warper function for C++ functions
 # ========
 
+'''
 # void setFF( int * n, double * grid, double * step,  )
 lib.setFF.argtypes = [array1i,array4d,array2d]
 lib.setFF.restype  = None
@@ -47,6 +48,46 @@ lib.setFF_Pointer.argtypes = [array4d]
 lib.setFF_Pointer.restype  = None
 def setFF_Pointer( grid ):
 	lib.setFF_Pointer( grid )
+'''
+
+# void .setFF_shape( int * n, double * step  )
+lib.setFF_shape.argtypes = [array1i,array2d]
+lib.setFF_shape.restype  = None
+def setFF_shape( n_, cell ):
+	n     = np.array( (n_[2],n_[1],n_[0]) ).astype(np.int32)
+	lib.setFF_shape( n, cell )
+
+# void setFF_pointer( double * gridF, double * gridE  )
+lib.setFF_Fpointer.argtypes = [array4d]
+lib.setFF_Fpointer.restype  = None
+def setFF_Fpointer( gridF ):
+	lib.setFF_Fpointer( gridF )
+
+# void setFF_pointer( double * gridF, double * gridE  )
+lib.setFF_Epointer.argtypes = [array3d]
+lib.setFF_Epointer.restype  = None
+def setFF_Epointer( gridE ):
+	lib.setFF_Epointer( gridE )
+
+def setFF( gridF=None, cell=None, gridE=None ):
+	n_ = None
+	if gridF is not None:
+		setFF_Fpointer( gridF )
+		n_    = np.shape(gridF)
+	if gridE is not None:
+		setFF_Epointer( gridE )
+		n_    = np.shape(gridF)
+	if cell is None:
+		cell = np.array([
+		PPU.params['gridA'],
+		PPU.params['gridB'],
+		PPU.params['gridC'],
+		]).copy() 	
+	if n_ is not None:
+		setFF_shape( n_, cell )
+	else:
+		"Warrning : setFF shape not set !!! "
+
 
 #void setRelax( int maxIters, double convF2, double dt, double damping )
 lib.setRelax.argtypes = [ c_int, c_double, c_double, c_double ]
@@ -80,6 +121,12 @@ def setTip( lRadial=None, kRadial=None, rPP0=None, kSpring=None	):
 	print " kSpring ", kSpring
 	lib.setTip( lRadial, kRadial, rPP0, kSpring )
 
+#void setTipSpline( int n, double * xs, double * ydys ){  
+lib.setTipSpline.argtypes = [ c_int, array1d, array2d ]
+lib.setTipSpline.restype  = None
+def setTipSpline( xs, ydys	):
+	n = len(xs)
+	lib.setTipSpline( n, xs, ydys )
 
 # void getClassicalFF       (    int natom,   double * Rs_, double * C6, double * C12 )
 lib.getLenardJonesFF.argtypes  = [ c_int,       array2d,      array1d,     array1d     ]
@@ -101,3 +148,35 @@ lib.relaxTipStroke.restype   = c_int
 def relaxTipStroke( rTips, rs, fs, probeStart=1, relaxAlg=1 ):
 	n = len(rTips) 
 	return lib.relaxTipStroke( probeStart, relaxAlg, n, rTips, rs, fs )
+
+# void subsample_uniform_spline( double x0, double dx, int n, double * ydys, int m, double * xs_, double * ys_ )
+lib.subsample_uniform_spline.argtypes  = [ c_double, c_double, c_int, array2d, c_int, array1d, array1d ]
+lib.subsample_uniform_spline.restype   = None
+def subsample_uniform_spline( x0, dx, ydys, xs_, ys_=None ):
+	n = len(ydys)
+	m = len(xs_)
+	if ys_ is None :
+		ys_ = np.zeros(m)
+	lib.subsample_uniform_spline( x0, dx, n, ydys, m, xs_, ys_ );
+	return ys_;
+
+# void subsample_nonuniform_spline( int n, double * xs, double * ydys, int m, double * xs_, double * ys_ )
+lib.subsample_nonuniform_spline.argtypes  = [ c_int, array1d, array2d, c_int, array1d, array1d ]
+lib.subsample_nonuniform_spline.restype   = None
+def subsample_nonuniform_spline( xs, ydys, xs_, ys_=None ):
+	n = len(xs )
+	m = len(xs_)
+	if ys_ is None :
+		ys_ = np.zeros(m)
+	lib.subsample_nonuniform_spline( n, xs, ydys, m, xs_, ys_ );
+	return ys_;
+
+# void test_force( int type, int n, double * r0_, double * dr_, double * R_, double * fs_ ){
+lib.test_force.argtypes  = [ c_int, c_int, array1d, array1d, array1d, array2d ]
+lib.test_force.restype   = None
+def test_force( typ, r0, dr, R, fs ):
+	n = len( fs )
+	lib.test_force( typ, n, r0, dr, R, fs );
+	return fs;
+
+

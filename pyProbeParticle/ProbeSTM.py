@@ -43,7 +43,7 @@ def	read_GPAW_all(name = 'OUTPUT.gpw', fermi = None,orbs = 'sp', pbc=(1,1), imag
 	assert (orbs == 'sp'), "sorry I can't do different orbitals" 	
 	assert (imaginary == False), "sorry imaginary version is under development" 	
 	print "reading GPAW LCAO coefficients for basis: ",orbs	
-	from ase import *
+	from ase import Atoms
 	from gpaw import GPAW
 	calc = GPAW(name)
 	slab = calc.get_atoms()
@@ -122,8 +122,6 @@ def	read_GPAW_all(name = 'OUTPUT.gpw', fermi = None,orbs = 'sp', pbc=(1,1), imag
 		Ratin = atoms.get_positions()
 		print " Number of atoms after PBC: ", len(Ratin)
 	return eig.copy(), coeffs.copy(), Ratin.copy();
-
-
 
 def	read_fire_coeffs(fermi, name = 'phik_' ,orbs = 'sp', pbc=(1,1), imaginary = False, cut_min=-15.0, cut_max=5.0, cut_at=-1, lower_atoms=[], lower_coefs=[]):
 	'''
@@ -259,7 +257,8 @@ def read_fire_atoms(name, cut_at=-1, pbc=(1,1), lvs=np.array([[0.0,0.0],[0.0,0.0
 	Ratin    = np.transpose(Rs).copy()
 	return Ratin ;#, Natin;
 
-def dIdV( V, WF, eta ,eig, R, Rat, coes, orbs='sp', s=1.0, px =0.0, py=0.0, pz=0.0):
+
+def dIdV( V, WF, eta ,eig, R, Rat, coes, orbs='sp', s=0.0, px =0.0, py=0.0, pz=0.0, dxz=0.0, dyz=0.0, dz2=0.0):
 	'''
 	dIdV( V, WF, eta ,eig, R, Rat, coes, orbs='sp', s=1.0, px =0.0, py=0.0, pz=0.0):
 	V - voltage = (energy vs. the Fermi Level in eV);
@@ -274,125 +273,49 @@ def dIdV( V, WF, eta ,eig, R, Rat, coes, orbs='sp', s=1.0, px =0.0, py=0.0, pz=0
 	'''
 	#assert ((orbs == 'sp')or(orbs == 'spd')), "sorry I can't do different orbitals" 
 	assert (orbs == 'sp'), "sorry I can't do different orbitals" 	
-	assert ((s > 0.0)or(px > 0.0)or(py > 0.0)or(pz > 0.0)), "all tip orbitals are zero"
-	assert ((s >= 0.0)and(px >= 0.0)and(py >= 0.0)and(pz >= 0.0)), "you cannot have negative current"
-	bo=False
+	assert ((s > 0.0)or(px > 0.0)or(py > 0.0)or(pz > 0.0)or(dz2 > 0.0)or(dxz > 0.0)or(dyz > 0.0)), "all tip orbitals are zero"
+	assert ((s >= 0.0)and(px >= 0.0)and(py >= 0.0)and(pz >= 0.0)and(dz2 >= 0.0)and(dxz >= 0.0)and(dyz >= 0.0)), "you cannot have negative current"
+	tip = np.zeros((9))
+	tip[0] = s
+	tip[1] = py
+	tip[2] = pz
+	tip[3] = px
+	tip[5] = dyz
+	tip[6] = dz2
+	tip[7] = dxz
 	if (orbs == 'sp'):
-		if ((px>0.0)and(px==py)):
-			cur = px*dIdV_pxy_sp( V, WF, eta ,eig, R, Rat, coes)
-			bo=True
-			if (s>0.0):
-				cur += s*dIdV_s_sp( V, WF, eta ,eig, R, Rat, coes)
-			if (pz>0.0):
-				cur += pz*dIdV_pz_sp( V, WF, eta ,eig, R, Rat, coes)
-		else:
-			if (s>0.0):
-				cur = s*dIdV_s_sp( V, WF, eta ,eig, R, Rat, coes)
-				bo=True
-			if (px>0.0):
-				curpx = px*dIdV_px_sp( V, WF, eta ,eig, R, Rat, coes)
-				if bo:
-					cur += curpx
-				else:
-					cur = curpx
-					bo=True
-			if (py>0.0):
-				curpy = py*dIdV_py_sp( V, WF, eta ,eig, R, Rat, coes)
-				if bo:
-					cur += curpy
-				else:
-					cur = curpy
-					bo=True
-			if (pz>0.0):
-				curpz = pz*dIdV_pz_sp( V, WF, eta ,eig, R, Rat, coes)
-				if bo:
-					cur += curpz
-				else:
-					cur = curpz
-					bo=True
-	'''
-	else:
-		if (s>0.0):
-			cur = s*dIdV_s_spd( V, WF, eta ,eig, R, Rat, coes)
-			bo=True
-		if (px>0.0):
-			curpx = px*dIdV_px_spd( V, WF, eta ,eig, R, Rat, coes)
-			if bo:
-				cur += curpx
-			else:
-				cur = curpx
-				bo=True
-		if (py>0.0):
-			curpy = py*dIdV_py_spd( V, WF, eta ,eig, R, Rat, coes)
-			if bo:
-				cur += curpy
-			else:
-				cur = curpy
-				bo=True
-		if (pz>0.0):
-			curpz = pz*dIdV_pz_spd( V, WF, eta ,eig, R, Rat, coes)
-			if bo:
-				cur += curpz
-			else:
-				cur = curpz
-				bo=True
-	'''
+		cur = dIdV_sp_sp( V, WF, eta, eig, R, Rat, coes, tip)
 	return cur;
 
-
-def dIdV_para( V, WF, eta ,eig, R, Rat, coes, orbs, s, px, py, pz, name):
+def dIdV_tilt( V, WF, eta ,eig, R, R0, Rat, coes, orbs='sp', pz=0.0, pxy =0.0, dz2=0.0, dxyz=0.0, len_R=4.0, al=1.0):
 	'''
-	dIdV( V, WF, eta ,eig, R, Rat, coes, orbs='sp', s=1.0, px =0.0, py=0.0, pz=0.0, cur_in):
+	dIdV_tilt( V, WF, eta ,eig, R, R0, Rat, coes, orbs='sp', pz=1.0, pxy =0.0, len_R=4.0, al=1.0):
 	V - voltage = (energy vs. the Fermi Level in eV);
-	WF - workfunction (normally 5eV),
-	eta - energy smearing (0.5-0.15), eig - eigenenergies of sample states (=molecular orbitals)
-	R input of points in whish you calculate dI/dV,...
-	unification of all the predefined dI/dV procedures from C++, you can choose, sheather you want
-	sp or spd orbitals of the sample, and s and/or px and/or py and/or pz orbitals of the tip apex
+	WF - workfunction (normally ~5 eV gives reasonable results),
+	eta - energy smearing (0.5-0.30 eV) deppending on system (for single orbital very low number
+	eig - eigenenergies of sample states (=molecular orbitals)
+	R input of points in whish you calculate dI/dV (relaxed via PP afm, or nonrelaxed via mkSpaceGrid)
+	coes -- LCAO coefficients from read_fire_coes (Fireball, maybe FHI-AIMS & mathematica) or read_GPAW_all
+	orbs = 'sp' orbitals of the sample (spd don't work at the moment
+	pz and/or pxy tilting orbitals on the PP
+	len_R - length between the tip and the PP
+	al = 1.0 rescaling of the actuall tilting
 	'''
 	#assert ((orbs == 'sp')or(orbs == 'spd')), "sorry I can't do different orbitals" 
 	assert (orbs == 'sp'), "sorry I can't do different orbitals" 	
-	assert ((s > 0.0)or(px > 0.0)or(py > 0.0)or(pz > 0.0)), "all tip orbitals are zero"
-	assert ((s >= 0.0)and(px >= 0.0)and(py >= 0.0)and(pz >= 0.0)), "you cannot have negative current"
-	bo=False
+	assert ((pz > 0.0)or(pxy > 0.0)or(dz2 > 0.0)or(dxyz > 0.0)), "all tip orbitals are zero"
+	assert ((pz >= 0.0)and(pxy >= 0.0)and(dz2 >= 0.0)and(dxyz >= 0.0)), "you cannot have negative current"
+	tip = np.zeros((4))
+	tip[0] = pz
+	tip[1] = pxy
+	tip[2] = dz2
+	tip[3] = dxyz
+	print "tip coefs:", tip
 	if (orbs == 'sp'):
-		if ((px>0.0)and(px==py)):
-			cur = px*dIdV_pxy_sp( V, WF, eta ,eig, R, Rat, coes)
-			bo=True
-			if (s>0.0):
-				cur += s*dIdV_s_sp( V, WF, eta ,eig, R, Rat, coes)
-			if (pz>0.0):
-				cur += pz*dIdV_pz_sp( V, WF, eta ,eig, R, Rat, coes)
-		else:
-			if (s>0.0):
-				cur = s*dIdV_s_sp( V, WF, eta ,eig, R, Rat, coes)
-				bo=True
-			if (px>0.0):
-				curpx = px*dIdV_px_sp( V, WF, eta ,eig, R, Rat, coes)
-				if bo:
-					cur += curpx
-				else:
-					cur = curpx
-					bo=True
-			if (py>0.0):
-				curpy = py*dIdV_py_sp( V, WF, eta ,eig, R, Rat, coes)
-				if bo:
-					cur += curpy
-				else:
-					cur = curpy
-					bo=True
-			if (pz>0.0):
-				curpz = pz*dIdV_pz_sp( V, WF, eta ,eig, R, Rat, coes)
-				if bo:
-					cur += curpz
-				else:
-					cur = curpz
-					bo=True
-	#print "cur:", cur
-	np.save(name,cur)
-	# The end of parallel procedure!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		cur = dIdV_sp_sp_tilt( V, WF, eta, eig, R, R0, Rat, coes, tip, len_R, al)
+	return cur;
 
-def STM( V, nV, WF, eta ,eig, R, Rat, coes, orbs='sp', s=1.0, px =0.0, py=0.0, pz=0.0, WF_decay=1.0):
+def STM( V, nV, WF, eta ,eig, R, Rat, coes, orbs='sp', s=0.0, px =0.0, py=0.0, pz=0.0, WF_decay=1.0):
 	'''
 	STM( V, nV, WF, eta ,eig, R, Rat, coes, orbs='sp', s=1.0, px =0.0, py=0.0, pz=0.0, WF_decay=1.0):
 	summing more dI/dV via rectangle integration, be aware Work Function is changing with Voltage!
@@ -416,13 +339,49 @@ def STM( V, nV, WF, eta ,eig, R, Rat, coes, orbs='sp', s=1.0, px =0.0, py=0.0, p
 	print "All dI/dV steps done, current rescalled into Ampers"
 	return cur;
 
+def IETS_simple( V, WF, eta ,eig, R, Rat, coes, orbs='sp', s=0.0, px =0.0, py=0.0, pz=0.0, dxz=0.0, dyz=0.0, dz2=0.0, Amp=0.02):
+	'''
+	IETS_simple( V, WF, eta ,eig, R, Rat, coes, orbs='sp', s=0.0, px =0.0, py=0.0, pz=0.0, dxz=0.0, dyz=0.0, dz2=0.0, Amp=0.02)
+	V - voltage = (energy vs. the Fermi Level in eV);
+	WF - workfunction (normally ~5 eV gives reasonable results),
+	eta - energy smearing (0.5-0.30 eV) deppending on system (for single orbital very low number
+	eig - eigenenergies of sample states (=molecular orbitals)
+	R input of points in whish you calculate dI/dV (relaxed via PP afm, or nonrelaxed via mkSpaceGrid)
+	coes -- LCAO coefficients from read_fire_coes (Fireball, maybe FHI-AIMS & mathematica) or read_GPAW_all
+	orbs = 'sp' orbitals of the sample (spd don't work at the moment
+	s and/or px and/or py and/or pz orbitals at the PP
+	unification of all the predefined dI/dV procedures from C++, you can choose, whatever PP orbital you want
+	Amp=0.02 amplitude of vibrations in x and y directions
+	IETS = (dI/dV)/dx+(dI/dV)/dy
+	'''
+	#assert ((orbs == 'sp')or(orbs == 'spd')), "sorry I can't do different orbitals" 
+	assert (orbs == 'sp'), "sorry I can't do different orbitals" 	
+	assert ((s > 0.0)or(px > 0.0)or(py > 0.0)or(pz > 0.0)or(dz2 > 0.0)or(dxz > 0.0)or(dyz > 0.0)), "all tip orbitals are zero"
+	assert ((s >= 0.0)and(px >= 0.0)and(py >= 0.0)and(pz >= 0.0)and(dz2 >= 0.0)and(dxz >= 0.0)and(dyz >= 0.0)), "you cannot have negative current"
+	print "Not working yet"
+	print "You entered very simple IETS calculations that consist of IETS calculations in different positoins of PP"
+	print "Vibration (x,y) Amplitude is:",Amp
+	tip = np.zeros((9))
+	tip[0] = s
+	tip[1] = py
+	tip[2] = pz
+	tip[3] = px
+	tip[5] = dyz
+	tip[6] = dz2
+	tip[7] = dxz
+	if (orbs == 'sp'):
+		cur1 = IETS_sp_sp( V, WF, eta, eig, R, Rat, coes, tip, Amp)
+	print "IETS done"
+	return cur1;
+
+
 # ==============================
 # ============================== interface to C++ core 
 # ==============================
 
 # ============================== interface to C++ core 
 
-cpp_name='ProbeSTM_0.0.10sp'
+cpp_name='ProbeSTM_0.0.11spd'
 #cpp_utils.compile_lib( cpp_name  )
 cpp_utils.make("STM")
 lib    = ctypes.CDLL(  cpp_utils.CPP_PATH + "/" + cpp_name + cpp_utils.lib_ext )     # load dynamic librady object using ctypes 
@@ -439,12 +398,12 @@ array4d = np.ctypeslib.ndpointer(dtype=np.double, ndim=4, flags='CONTIGUOUS')
 # ======== Python warper function for C++ functions
 # ========
 
-#************* s *************
-# void proc_dIdVssp( int NoAt, int NoOrb, int Npoints, double V, double WF, double eta, double* eig, double* R_, double* Rat_, double* coesin, double* cur)
-lib.proc_dIdVssp.argtypes = [ c_int, c_int, c_int, c_double, c_double, c_double, array1d, array4d, array2d, array2d, array1d ]
-lib.proc_dIdVssp.restype  = None
-def dIdV_s_sp( V, WF, eta ,eig, R, Rat, coes):
-	print "Entering the dI/dV (s-sp) procedure"
+#************* sp *************
+# void proc_dIdVspsp( int NoAt, int NoOrb, int Npoints, double V, double WF, double eta, double* eig, double* R_, double* Rat_, double* coesin, double* tip_coes, double* cur)
+lib.proc_dIdVspsp.argtypes = [ c_int, c_int, c_int, c_double, c_double, c_double, array1d, array4d, array2d, array2d, array1d, array1d ]
+lib.proc_dIdVspsp.restype  = None
+def dIdV_sp_sp( V, WF, eta ,eig, R, Rat, coes, tip_coes):
+	print "Entering the dI/dV (sp-sp) procedure"
 	NoAt = len(Rat)
 	NoOrb = len(eig)
 	sh = R.shape
@@ -454,16 +413,15 @@ def dIdV_s_sp( V, WF, eta ,eig, R, Rat, coes):
 	if (len(coes) != 0):
 		assert (NoOrb == len(coes)*len(coes[0])/(4*NoAt)), "Different eigennumbers, than basis"	
 	print "We're going to C++"
-	lib.proc_dIdVssp( NoAt, NoOrb, Npoints, V, WF, eta, eig, R.copy(), Rat, coes, cur_1d)
+	lib.proc_dIdVspsp( NoAt, NoOrb, Npoints, V, WF, eta, eig, R.copy(), Rat, coes, tip_coes, cur_1d)
 	print "We're back in Python"
 	return cur_1d.reshape((sh[0],sh[1],sh[2])).copy();
 
-#************* px *************
-# void proc_dIdVpxsp( int NoAt, int NoOrb, int Npoints, double V, double WF, double eta, double* eig, double* R_, double* Rat_, double* coesin, double* cur)
-lib.proc_dIdVpxsp.argtypes = [ c_int, c_int, c_int, c_double, c_double, c_double, array1d, array4d, array2d, array2d, array1d ]
-lib.proc_dIdVpxsp.restype  = None
-def dIdV_px_sp( V, WF, eta ,eig, R, Rat, coes):
-	print "Entering the dI/dV (px-sp) procedure"
+# void proc_dIdVspsp_tilt( int NoAt, int NoOrb, int Npoints, double V, double WF, double eta, double len_R, double al, double* eig, double* R_, double* R0_, double* Rat_, double* coesin, double* tip_coes, double* cur)
+lib.proc_dIdVspsp_tilt.argtypes = [ c_int, c_int, c_int, c_double, c_double, c_double, c_double, c_double, array1d, array4d, array4d, array2d, array2d, array1d, array1d ]
+lib.proc_dIdVspsp_tilt.restype  = None
+def dIdV_sp_sp_tilt( V, WF, eta ,eig, R, R0, Rat, coes, tip_coes, len_R, al):
+	print "Entering the dI/dV (sp-sp) procedure with tilting orbitals"
 	NoAt = len(Rat)
 	NoOrb = len(eig)
 	sh = R.shape
@@ -473,16 +431,15 @@ def dIdV_px_sp( V, WF, eta ,eig, R, Rat, coes):
 	if (len(coes) != 0):
 		assert (NoOrb == len(coes)*len(coes[0])/(4*NoAt)), "Different eigennumbers, than basis"	
 	print "We're going to C++"
-	lib.proc_dIdVpxsp( NoAt, NoOrb, Npoints, V, WF, eta, eig, R.copy(), Rat, coes, cur_1d)
+	lib.proc_dIdVspsp_tilt( NoAt, NoOrb, Npoints, V, WF, eta, len_R, al, eig, R.copy(), R0.copy(), Rat, coes, tip_coes, cur_1d)
 	print "We're back in Python"
 	return cur_1d.reshape((sh[0],sh[1],sh[2])).copy();
 
-#************* py *************
-# void proc_dIdVpysp( int NoAt, int NoOrb, int Npoints, double V, double WF, double eta, double* eig, double* R_, double* Rat_, double* coesin, double* cur)
-lib.proc_dIdVpysp.argtypes = [ c_int, c_int, c_int, c_double, c_double, c_double, array1d, array4d, array2d, array2d, array1d ]
-lib.proc_dIdVpysp.restype  = None
-def dIdV_py_sp( V, WF, eta ,eig, R, Rat, coes):
-	print "Entering the dI/dV (py-sp) procedure"
+# void proc_dIdVspsp( int NoAt, int NoOrb, int Npoints, double V, double WF, double eta, double Amp, double* eig, double* R_, double* Rat_, double* coesin, double* tip_coes, double* cur)
+lib.proc_IETSspsp.argtypes = [ c_int, c_int, c_int, c_double, c_double, c_double, c_double, array1d, array4d, array2d, array2d, array1d, array1d ]
+lib.proc_IETSspsp.restype  = None
+def IETS_sp_sp( V, WF, eta ,eig, R, Rat, coes, tip_coes, Amp):
+	print "Entering the IETS (sp-sp) procedure"
 	NoAt = len(Rat)
 	NoOrb = len(eig)
 	sh = R.shape
@@ -492,45 +449,7 @@ def dIdV_py_sp( V, WF, eta ,eig, R, Rat, coes):
 	if (len(coes) != 0):
 		assert (NoOrb == len(coes)*len(coes[0])/(4*NoAt)), "Different eigennumbers, than basis"	
 	print "We're going to C++"
-	lib.proc_dIdVpysp( NoAt, NoOrb, Npoints, V, WF, eta, eig, R.copy(), Rat, coes, cur_1d)
-	print "We're back in Python"
-	return cur_1d.reshape((sh[0],sh[1],sh[2])).copy();
-
-#************* pxy - fast pxy procedure *************
-# void proc_dIdVpxysp( int NoAt, int NoOrb, int Npoints, double V, double WF, double eta, double* eig, double* R_, double* Rat_, double* coesin, double* cur)
-lib.proc_dIdVpxysp.argtypes = [ c_int, c_int, c_int, c_double, c_double, c_double, array1d, array4d, array2d, array2d, array1d ]
-lib.proc_dIdVpxysp.restype  = None
-def dIdV_pxy_sp( V, WF, eta ,eig, R, Rat, coes):
-	print "Entering the dI/dV (pxy-sp) procedure"
-	NoAt = len(Rat)
-	NoOrb = len(eig)
-	sh = R.shape
-	cur_1d = np.zeros((sh[0]*sh[1]*sh[2]))
-	Npoints = sh[0]*sh[1]*sh[2]	#len(R)/3
-	assert (NoOrb == len(coes)), "Different eigennumbers, than basis"
-	if (len(coes) != 0):
-		assert (NoOrb == len(coes)*len(coes[0])/(4*NoAt)), "Different eigennumbers, than basis"	
-	print "We're going to C++"
-	lib.proc_dIdVpxysp( NoAt, NoOrb, Npoints, V, WF, eta, eig, R.copy(), Rat, coes, cur_1d)
-	print "We're back in Python"
-	return cur_1d.reshape((sh[0],sh[1],sh[2])).copy();
-
-#************* pz *************
-# void proc_dIdVpzsp( int NoAt, int NoOrb, int Npoints, double V, double WF, double eta, double* eig, double* R_, double* Rat_, double* coesin, double* cur)
-lib.proc_dIdVpzsp.argtypes = [ c_int, c_int, c_int, c_double, c_double, c_double, array1d, array4d, array2d, array2d, array1d ]
-lib.proc_dIdVpzsp.restype  = None
-def dIdV_pz_sp( V, WF, eta ,eig, R, Rat, coes):
-	print "Entering the dI/dV (pz-sp) procedure"
-	NoAt = len(Rat)
-	NoOrb = len(eig)
-	sh = R.shape
-	cur_1d = np.zeros((sh[0]*sh[1]*sh[2]))
-	Npoints = sh[0]*sh[1]*sh[2]	#len(R)/3
-	assert (NoOrb == len(coes)), "Different eigennumbers, than basis"
-	if (len(coes) != 0):
-		assert (NoOrb == len(coes)*len(coes[0])/(4*NoAt)), "Different eigennumbers, than basis"	
-	print "We're going to C++"
-	lib.proc_dIdVpzsp( NoAt, NoOrb, Npoints, V, WF, eta, eig, R.copy(), Rat, coes, cur_1d)
+	lib.proc_IETSspsp( NoAt, NoOrb, Npoints, V, WF, eta, Amp, eig, R.copy(), Rat, coes, tip_coes, cur_1d)
 	print "We're back in Python"
 	return cur_1d.reshape((sh[0],sh[1],sh[2])).copy();
 

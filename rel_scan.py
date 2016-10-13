@@ -83,7 +83,7 @@ for iq,Q in enumerate( Qs ):
 	        FF = FFLJ + FFel * Q
         else:
                 FF = FFLJ
-	PPC.setFF_Pointer( FF )
+	PPC.setFF_Fpointer( FF )
 	for ik,K in enumerate( Ks ):
 		dirname = "Q%1.2fK%1.2f" %(Q,K)
 		print " relaxed_scan for ", dirname

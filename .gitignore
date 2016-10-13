@@ -3,3 +3,5 @@
 *.so
 *.pyc
 *_backup
+*.npy
+*.png
