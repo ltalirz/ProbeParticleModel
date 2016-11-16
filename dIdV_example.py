@@ -5,6 +5,7 @@ import numpy as np
 
 import pyProbeParticle.GridUtils      as GU
 import pyProbeParticle.ProbeSTM       as PS
+import pyProbeParticle.ReadSTM        as RS
 
 import matplotlib
 # matplotlib.use('Agg') # Force matplotlib to not use any Xwindows backend. ## !!! important for working on clusters !!!!
@@ -22,7 +23,7 @@ pbc=(0,0)
 lvs = None
 #lvs = np.array([[15., 0.],[0.,15.]]
 WorkFunction = 5.0 #more or less standart.
-fermi=None	# the Fermi from GPAW ; means: -5.04612664712 eV
+fermi=None	# the Fermi from phid ... .dat file; !!! All energies are relative to Fermi !!!! None -  means: -5.04612664712 eV
 orbs= 'sp'	# only 'sp' works now
 cut_min=-1.0	# HOMO -0.88 bellow the Fermi Level
 cut_max=+1.0	# LUMO -0.88 above the Fermi Level
@@ -31,9 +32,9 @@ eta = 0.01	# very low, to pronounce the single orbitals only
 WF_decay=1.0	# for STM only - how fast the exponential decay fall, with the applied bias ( if 1 - 1:1 correspondence with bias; if 0, it doesn't change)
 nV = 9		# for STM only
 
-#eigEn, coefs, Ratin  = PS.read_GPAW_all(name = 'out_LCAO_LDA.gpw', fermi=None, orbs = orbs, pbc=pbc, cut_min=cut_min, cut_max=cut_max, cut_at=cut_at, lower_at=[0,1.]);
-Ratin = PS.read_fire_atoms(path+'crazy_mol.xyz',pbc=pbc,cut_at=cut_at)
-eigEn, coefs = PS.read_fire_coeffs(name = path+'phik_example_', fermi=-5.04612664712, orbs = orbs, pbc=pbc, cut_min=cut_min, cut_max=cut_max,cut_at=cut_at);
+#eigEn, coefs, Ratin = PS.read_AIMS_all(name = 'KS_eigenvectors_up.band_1.kpt_1.out', geom='geometry.in',fermi=fermi, orbs = 'sp', pbc=pbc, imaginary = False, cut_min=cut_min, cut_max=cut_max, cut_at=cut_at, lower_atoms=[], lower_coefs=[],header=True)
+#eigEn, coefs, Ratin  = RS.read_GPAW_all(name = 'out_LCAO_LDA.gpw', fermi=fermi, orbs = orbs, pbc=pbc, cut_min=cut_min, cut_max=cut_max, cut_at=cut_at, lower_atoms=[], lower_coefs=[]);
+eigEn, coefs, Ratin = RS.read_FIREBALL_all(name = path+'phik_example_', geom=path+'crazy_mol.xyz', fermi=fermi, orbs = orbs, pbc=pbc, cut_min=cut_min, cut_max=cut_max,cut_at=cut_at);
 
 tip_r1, lvec = GU.loadVecFieldNpy( path_pos+"PPpos" )
 
@@ -46,7 +47,7 @@ yl = lvec[2,1]
 zl = lvec[3,2]
 extent = (lvec[0,0],lvec[0,0]+xl,lvec[0,1],lvec[0,1]+yl)
 
-tip_r2 = PS.mkSpaceGrid(lvec[0,0],lvec[0,0]+xl,dx,lvec[0,1],lvec[0,1]+yl,dy,lvec[0,2],lvec[0,2]+zl,dz)
+tip_r2 = RS.mkSpaceGrid(lvec[0,0],lvec[0,0]+xl,dx,lvec[0,1],lvec[0,1]+yl,dy,lvec[0,2],lvec[0,2]+zl,dz)
 
 Voltages=[-0.88,+0.88]
 namez=['HOMO','LUMO']

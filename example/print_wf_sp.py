@@ -42,7 +42,7 @@ for i in range(53,55):
 		h += calc.wfs.setups[j].nao
 
 f=open('phik_example_s.dat','w')
-print >> f, n_at, n_bands
+print >> f, n_at, n_bands, calc.get_fermi_level()
 npy.savetxt(f,X)
 f.close()
 
@@ -57,7 +57,7 @@ for i in range(53,55):
 			X[i-53,2*j+1] = calc.wfs.kpt_u[0].C_nM[i,h+1]
 			h += calc.wfs.setups[j].nao
 f=open('phik_example_py.dat','w')
-print >> f, n_at, n_bands
+print >> f, n_at, n_bands, calc.get_fermi_level()
 npy.savetxt(f,X)
 f.close()
 
@@ -73,7 +73,7 @@ for i in range(53,55):
 			h += calc.wfs.setups[j].nao
 
 f=open('phik_example_pz.dat','w')
-print >> f, n_at, n_bands
+print >> f, n_at, n_bands, calc.get_fermi_level()
 npy.savetxt(f,X)
 f.close()
 
@@ -89,7 +89,7 @@ for i in range(53,55):
 			h += calc.wfs.setups[j].nao
 
 f=open('phik_example_px.dat','w')
-print >> f, n_at, n_bands
+print >> f, n_at, n_bands, calc.get_fermi_level()
 npy.savetxt(f,X)
 f.close()
 '''
