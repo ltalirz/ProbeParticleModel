@@ -41,7 +41,6 @@ def	read_AIMS_all(name = 'KS_eigenvectors.band_1.kpt_1.out', geom='geometry.in',
 	cut_at = -1 .. all atoms; eg. cut_at = 15 --> only first fifteen atoms for the current calculations (mostly the 1st layer is the important one)
 	lower_atotms=[], lower_coefs=[] ... do nothing; lower_atoms=[0,1,2,3], lower_coefs=[0.5,0.5,0.5,0.5] lower coefficients (=hoppings) for the first four atoms by 0.5
 	'''
-	assert (fermi != None), "You need to specify fermi"
 	assert (orbs == 'sp'), "sorry I can't do different orbitals" 	
 	assert (imaginary == False), "sorry imaginary version is under development" 	
 	print "reading FHI-AIMS LCAO coefficients for basis: ",orbs	
@@ -90,7 +89,6 @@ def	read_AIMS_all(name = 'KS_eigenvectors.band_1.kpt_1.out', geom='geometry.in',
 		eig += -fermi
 	del pre_eig;
 	print "Fermi Level set to:", fermi, "AIMS set Fermi to zero by itself"
-	eig -= fermi
 	n_min = -1
 	n_max = -1
 	j = 0

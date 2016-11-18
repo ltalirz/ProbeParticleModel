@@ -27,6 +27,9 @@ parser.add_option( "-i", "--input", action="store", type="string", help="format 
 parser.add_option( "-g", "--geometry", action="store", type="string", help="format of input file")
 parser.add_option( "-t", "--tip", action="store", type="string", help="tip model (multipole)", default='s')
 parser.add_option( "-w", "--sigma", action="store", type="float",  help="gaussian width for convolution in Electrostatics [Angstroem]", default=0.7)
+parser.add_option( "--noLJ", action="store_false",  help="noLJ forcefield", default=True)
+parser.add_option( "--noPBC", action="store_false",  help="noLJ forcefield", default=True)
+
 (options, args) = parser.parse_args()
 
 print options
@@ -89,7 +92,7 @@ if (options.noLJ):
 	PPU.params['gridC'] =    lvec[ 3,:  ].copy()
 	PPU.params['gridN'] = np.array([nDim[2],nDim[1],nDim[0]])
 
-	if options.geom==None:
+	if options.geometry==None:
 		if(is_cube):
 			atoms = basUtils.loadAtomsCUBE(options.input,elements.ELEMENT_DICT)
 		elif(is_xsf):
@@ -102,9 +105,9 @@ if (options.noLJ):
 
 		print "--- Compute Lennard-Jones Force-field ---"
 		if(gs_xyz):
-				atoms = basUtils.loadAtoms(options.geom, elements.ELEMENT_DICT )
+				atoms = basUtils.loadAtoms(options.geometry, elements.ELEMENT_DICT )
 		elif(gs_cube):
-				atoms = basUtils.loadAtomsCUBE(options.geom,elements.ELEMENT_DICT)
+				atoms = basUtils.loadAtomsCUBE(options.geometry, elements.ELEMENT_DICT)
 		elif(gs_xsf):
 			atoms, nDim, lvec = basUtils.loadXSFGeom( options.input )
 		else:

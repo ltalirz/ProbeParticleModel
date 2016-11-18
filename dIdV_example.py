@@ -32,7 +32,7 @@ eta = 0.01	# very low, to pronounce the single orbitals only
 WF_decay=1.0	# for STM only - how fast the exponential decay fall, with the applied bias ( if 1 - 1:1 correspondence with bias; if 0, it doesn't change)
 nV = 9		# for STM only
 
-#eigEn, coefs, Ratin = PS.read_AIMS_all(name = 'KS_eigenvectors_up.band_1.kpt_1.out', geom='geometry.in',fermi=fermi, orbs = 'sp', pbc=pbc, imaginary = False, cut_min=cut_min, cut_max=cut_max, cut_at=cut_at, lower_atoms=[], lower_coefs=[],header=True)
+#eigEn, coefs, Ratin = RS.read_AIMS_all(name = 'KS_eigenvectors_up.band_1.kpt_1.out', geom='geometry.in',fermi=fermi, orbs = 'sp', pbc=pbc, imaginary = False, cut_min=cut_min, cut_max=cut_max, cut_at=cut_at, lower_atoms=[], lower_coefs=[],header=True)
 #eigEn, coefs, Ratin  = RS.read_GPAW_all(name = 'out_LCAO_LDA.gpw', fermi=fermi, orbs = orbs, pbc=pbc, cut_min=cut_min, cut_max=cut_max, cut_at=cut_at, lower_atoms=[], lower_coefs=[]);
 eigEn, coefs, Ratin = RS.read_FIREBALL_all(name = path+'phik_example_', geom=path+'crazy_mol.xyz', fermi=fermi, orbs = orbs, pbc=pbc, cut_min=cut_min, cut_max=cut_max,cut_at=cut_at);
 
